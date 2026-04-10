@@ -779,7 +779,18 @@ async function reviewRelease() {
       })
     });
 
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const msg = errData?.error?.message || `HTTP ${response.status}`;
+      throw new Error(msg);
+    }
+
     const data = await response.json();
+
+    if (!data.content || data.content.length === 0) {
+      throw new Error('Resposta vazia da API.');
+    }
+
     const raw = data.content.map(i => i.text || '').join('');
 
     // Clean JSON
@@ -792,10 +803,20 @@ async function reviewRelease() {
 
     renderOutput();
   } catch (err) {
-    showToast('Erro na revisão. Tente novamente.');
-    console.error(err);
+    console.error('Erro detalhado:', err);
+    const msg = err.message || 'Erro desconhecido';
+    // Friendly messages for common errors
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
+      showErrorState('Erro de conexão: seu navegador bloqueou a chamada à API (CORS). Acesse a ferramenta pelo link do GitHub Pages, não como arquivo local.');
+    } else if (msg.includes('401') || msg.includes('auth') || msg.toLowerCase().includes('invalid')) {
+      showErrorState('Chave Anthropic inválida ou expirada. Verifique o campo CHAVE ANTHROPIC.');
+    } else if (msg.includes('429')) {
+      showErrorState('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.');
+    } else {
+      showErrorState(`Erro: ${msg}`);
+    }
     showLoading(false);
-    document.getElementById('emptyState').style.display = 'flex';
+    document.getElementById('emptyState').style.display = 'none';
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Revisar Release`;
@@ -853,6 +874,17 @@ function renderOutput() {
   // Show buttons
   document.getElementById('btnCopy').style.display = 'flex';
   document.getElementById('btnGithubPanel').style.display = 'flex';
+}
+
+function showErrorState(msg) {
+  const outText = document.getElementById('outputText');
+  outText.style.display = 'block';
+  outText.innerHTML = `<div style="color:var(--err);font-family:var(--mono);font-size:0.8rem;line-height:1.7;padding:0.5rem 0;">
+    <div style="font-size:1.2rem;margin-bottom:0.5rem">✗</div>
+    ${msg}
+  </div>`;
+  document.getElementById('interventions').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
 }
 
 function showLoading(show) {
