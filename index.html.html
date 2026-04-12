@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisor de Releases</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2efe9;--surface:#fff;--surface2:#f8f6f2;--ink:#1c1c1c;--ink2:#4a4a4a;--ink3:#909090;--red:#c0392b;--red-soft:#fdecea;--amber:#d35400;--amber-soft:#fef3ec;--green:#1a7a5e;--green-soft:#e5f5f0;--border:#e2ddd5;--border2:#ccc8be;--purple:#5e3ea1;--mono:"DM Mono",monospace;--sans:"DM Sans",sans-serif;--serif:"DM Serif Display",serif;--r:12px;--rs:8px;--shadow:0 2px 8px rgba(0,0,0,.06);--shadow-md:0 6px 20px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh}
+nav{background:var(--ink);height:50px;display:flex;align-items:center;padding:0 1.5rem;gap:1rem;position:sticky;top:0;z-index:100}
+.nav-brand{font-family:var(--serif);font-size:1.1rem;color:#fff;display:flex;align-items:center;gap:.5rem}
+.nav-pip{width:7px;height:7px;background:var(--red);border-radius:50%}
+.nav-tag{font-family:var(--mono);font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:#555;border-left:1px solid #333;padding-left:1rem}
+.nav-sep{flex:1}
+.nav-local{font-family:var(--mono);font-size:.58rem;color:#444;letter-spacing:1px;display:flex;align-items:center;gap:.4rem}
+.nav-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.layout{display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 50px)}
+.input-panel{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+.panel-hdr{padding:.65rem 1.25rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.panel-label{font-family:var(--mono);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+.char-ct{font-family:var(--mono);font-size:.58rem;color:var(--ink3);margin-left:auto}
+textarea{flex:1;border:none;outline:none;resize:none;padding:1.25rem;font-family:var(--sans);font-size:.88rem;line-height:1.8;color:var(--ink);font-weight:300;background:var(--surface)}
+textarea::placeholder{color:#c2bdb5;font-style:italic}
+.input-footer{padding:.75rem 1.25rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.btn-run{background:var(--red);color:#fff;border:none;padding:.52rem 1.2rem;font-family:var(--sans);font-size:.8rem;font-weight:600;border-radius:var(--rs);cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:all .15s;box-shadow:0 2px 8px rgba(192,57,43,.25)}
+.btn-run:hover{background:#a93226}
+.btn-run:active{transform:scale(.97)}
+.btn-clear{background:transparent;border:1.5px solid var(--border2);color:var(--ink3);padding:.52rem .9rem;font-family:var(--sans);font-size:.8rem;font-weight:500;border-radius:var(--rs);cursor:pointer;transition:all .15s}
+.btn-clear:hover{border-color:var(--ink3);color:var(--ink)}
+.checklist-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+.score-strip{padding:.9rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;flex-shrink:0}
+.score-num{font-family:var(--serif);font-size:2rem;line-height:1}
+.s-high{color:var(--green)}.s-mid{color:var(--amber)}.s-low{color:var(--red)}
+.score-label{font-family:var(--mono);font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+.score-bar{flex:1}
+.score-track{height:5px;background:var(--border);border-radius:10px;overflow:hidden}
+.score-fill{height:100%;border-radius:10px;transition:width .9s cubic-bezier(.4,0,.2,1)}
+.sf-high{background:var(--green)}.sf-mid{background:var(--amber)}.sf-low{background:var(--red)}
+.score-counts{display:flex;gap:.6rem;margin-top:.4rem}
+.sc-pill{font-family:var(--mono);font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:.2rem .5rem;border-radius:20px;display:flex;align-items:center;gap:.3rem}
+.sc-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.pill-err{background:var(--red-soft);color:var(--red)}.dot-err{background:var(--red)}
+.pill-warn{background:var(--amber-soft);color:var(--amber)}.dot-warn{background:var(--amber)}
+.pill-ok{background:var(--green-soft);color:var(--green)}.dot-ok{background:var(--green)}
+.checklist-scroll{flex:1;overflow-y:auto;padding:1rem 1.25rem 1.5rem;display:flex;flex-direction:column;gap:.35rem}
+.cl-section{font-family:var(--mono);font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-top:.5rem;margin-bottom:.1rem;display:flex;align-items:center;gap:.5rem}
+.cl-section::after{content:"";flex:1;height:1px;background:var(--border)}
+.cl-section:first-child{margin-top:0}
+.toggle-adv{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--purple);cursor:pointer;padding:.4rem 0;border:none;background:none;margin-top:.25rem}
+.toggle-adv svg{transition:transform .2s}
+.toggle-adv.open svg{transform:rotate(180deg)}
+.cl-item{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:box-shadow .15s,opacity .2s;animation:slideIn .25s ease both}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.cl-item:hover{box-shadow:var(--shadow)}
+.cl-item.resolved{opacity:.45}
+.cl-item.resolved .cl-main-text{text-decoration:line-through;color:var(--ink3)}
+.cl-item.type-err{border-left:3px solid var(--red)}
+.cl-item.type-warn{border-left:3px solid var(--amber)}
+.cl-item.type-ok{border-left:3px solid var(--green)}
+.cl-main{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .85rem;user-select:none}
+.cl-check{width:18px;height:18px;border:2px solid var(--border2);border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;cursor:pointer}
+.cl-check:hover{border-color:var(--ink3)}
+.cl-check.checked{background:var(--green);border-color:var(--green)}
+.cl-check.checked::after{content:"";width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(42deg) translateY(-1px);display:block}
+.cl-body{flex:1;min-width:0}
+.cl-cat{font-family:var(--mono);font-size:.56rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:.18rem}
+.cl-main-text{font-size:.82rem;line-height:1.5;color:var(--ink);font-weight:400}
+.cl-type-icon{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0;margin-top:1px}
+.icon-err{background:var(--red-soft);color:var(--red)}.icon-warn{background:var(--amber-soft);color:var(--amber)}.icon-ok{background:var(--green-soft);color:var(--green)}
+.cl-expand-btn{background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;flex-shrink:0;margin-top:2px;transition:color .15s,transform .2s;display:flex}
+.cl-expand-btn:hover{color:var(--ink)}
+.cl-expand-btn.open{transform:rotate(180deg);color:var(--ink)}
+.cl-detail{padding:.6rem .85rem .75rem 2.6rem;font-size:.78rem;line-height:1.6;color:var(--ink2);display:none;border-top:1px dashed var(--border)}
+.cl-detail.open{display:block}
+.cl-detail-sug{margin-top:.45rem;background:var(--surface2);border-radius:var(--rs);padding:.5rem .65rem;font-size:.76rem;color:var(--ink2);display:flex;gap:.4rem}
+.cl-detail-sug-icon{color:var(--amber);flex-shrink:0}
+.cl-occs{margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem}
+.occ-err{font-family:var(--mono);font-size:.62rem;background:var(--red-soft);color:var(--red);border-radius:4px;padding:.15rem .4rem}
+.occ-warn{font-family:var(--mono);font-size:.62rem;background:var(--amber-soft);color:var(--amber);border-radius:4px;padding:.15rem .4rem}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;padding:2rem;text-align:center}
+.empty-glyph{font-family:var(--serif);font-size:2.5rem;color:#ccc;font-style:italic}
+.empty-text{font-family:var(--mono);font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:#c0b8ae}
+.checklist-footer{padding:.65rem 1.25rem;background:var(--surface2);border-top:1px solid var(--border);display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.btn-copy-rpt{background:transparent;border:1.5px solid var(--border2);color:var(--ink2);font-family:var(--sans);font-size:.75rem;font-weight:500;padding:.38rem .75rem;border-radius:var(--rs);cursor:pointer;display:flex;align-items:center;gap:.35rem;transition:all .15s}
+.btn-copy-rpt:hover{border-color:var(--ink3);color:var(--ink)}
+.footer-resolved{font-family:var(--mono);font-size:.6rem;color:var(--ink3);letter-spacing:1px;margin-left:auto}
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--ink);color:#fff;font-family:var(--mono);font-size:.68rem;padding:.5rem 1rem;border-radius:var(--rs);border-left:3px solid var(--red);opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;z-index:999;box-shadow:var(--shadow-md)}
+#toast.show{opacity:1;transform:translateY(0)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+@media(max-width:800px){.layout{grid-template-columns:1fr;grid-template-rows:50vh 1fr}.input-panel{border-right:none;border-bottom:1px solid var(--border)}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand"><div class="nav-pip"></div>Revisor Release</div>
+  <div class="nav-tag">Checklist Editorial v6.0</div>
+  <div class="nav-sep"></div>
+  <div class="nav-local"><div class="nav-dot"></div>Motor local</div>
+</nav>
+<div class="layout">
+  <div class="input-panel">
+    <div class="panel-hdr">
+      <span class="panel-label">Texto do release</span>
+      <span class="char-ct" id="charCt">0 caracteres</span>
+    </div>
+    <textarea id="inputText" oninput="updateCt()" spellcheck="false" placeholder="Cole aqui o texto completo do release — título, lide e corpo..."></textarea>
+    <div class="input-footer">
+      <button class="btn-run" onclick="runReview()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Verificar release
+      </button>
+      <button class="btn-clear" onclick="clearAll()">Limpar</button>
+    </div>
+  </div>
+  <div class="checklist-panel">
+    <div class="panel-hdr">
+      <span class="panel-label">Checklist editorial</span>
+      <span class="char-ct" id="clStatus">Aguardando texto</span>
+    </div>
+    <div class="score-strip" id="scoreStrip" style="display:none">
+      <div>
+        <div class="score-num" id="scoreNum">--</div>
+        <div class="score-label">conformidade</div>
+      </div>
+      <div class="score-bar">
+        <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+        <div class="score-counts" id="scoreCounts"></div>
+      </div>
+    </div>
+    <div class="checklist-scroll">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-glyph">&#9711;</div>
+        <div class="empty-text">Cole um texto e clique em verificar</div>
+      </div>
+      <div id="clItems" style="display:none"></div>
+    </div>
+    <div class="checklist-footer" id="clFooter" style="display:none">
+      <button class="btn-copy-rpt" onclick="copyReport()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Exportar relatório
+      </button>
+      <span class="footer-resolved" id="footerResolved"></span>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+var ADJ=['importante','importantes','expressivo','expressiva','expressivos','expressivas','significativo','significativa','significativos','significativas','historico','historica','historicos','historicas','robusto','robusta','robustos','robustas','inovador','inovadora','inovadores','inovadoras','relevante','relevantes','excepcional','excepcionais','grandioso','grandiosa','grandiosos','grandiosas','inspirador','inspiradora','inspiradores','inspiradoras','surpreendente','surpreendentes','notavel','notaveis','pioneiro','pioneira','pioneiros','pioneiras','excelente','excelentes','impactante','impactantes','inedito','inedita','ineditos','ineditas','maravilhoso','maravilhosa','extraordinario','extraordinaria'];
+var FRASES=['grande avanco','marco historico','marco importante','passo importante','resultado expressivo','resultados expressivos','impacto positivo','impacto significativo'];
+var VPROIB=['admitiu','admite','reconheceu','reconhece','lamentou','lamenta','garantiu','garante','destaca','destacou','ressalta','ressaltou','relembra','relembrou','pontua','pontuou','celebra','celebrou','enaltece','enalteceu','exalta','exaltou','comemora','comemorou','reforca','reforcou','enfatiza','enfatizou','sublinha','sublinhou','salientou','salienta'];
+var VOK=['afirmou','declarou','informou','avaliou','disse','afirma','declara','informa','avalia'];
+var PEMOC=['emocionado','emocionada','emocionados','emocionadas','feliz','animado','animada','animados','animadas','orgulhoso','orgulhosa','orgulhosos','orgulhosas','entusiasmado','entusiasmada','entusiasmados','entusiasmadas','empolgado','empolgada','empolgados','empolgadas','satisfeito','satisfeita','satisfeitos','satisfeitas'];
+var CARGOS_STR='diretor|diretora|diretores|diretoras|gerente|gerentes|presidente|presidentes|vice-presidente|superintendente|CEO|CFO|COO|CTO|coordenador|coordenadora|gestor|gestora|executivo|executiva|lider|chefe';
+var NUMS_RE=[/\b(onze|doze|treze|quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove)\b/gi,/\b(vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa)\b/gi,/\b(duzentos?|trezentos?|quatrocentos?|quinhentos?|seiscentos?|setecentos?|oitocentos?|novecentos?)\b/gi];
+var EVAGAS=['em breve','muito em breve','nos proximos dias','nos proximos meses','a curto prazo','a medio prazo','a longo prazo','no futuro proximo','oportunamente','em tempo habil','futuramente','proximamente'];
+var DADOS_RE=/R\$\s*[\d,.]+\s*(mil|milh[oõ]es?|bilh[oõ]es?)?|[\d,.]+\s*%|[\d,.]+\s*(MW|GW|MWh|GWh|km|toneladas?|unidades?|empregos?)/i;
+var AIP_RE=[/não apenas\s+[^,;.]{3,60}[,;]\s*(?:mas\s+também|e\s+também|mas)[^.]{3,80}/gi,/\b(?:gerar?|gera|gerando)\s+(?:oportunidades?|valor|futuro|transformação|desenvolvimento)/gi,/mais do que\s+[^,;.\n]{5,60},?\s+[a-zA-ZÀ-ÿ][^.\n]{5,80}/gi,/\b(?:impulsionar?|alavancar?|potencializar?|catalisar?)\s+(?:o\s+)?(?:crescimento|desenvolvimento|inovação|transformação)/gi];
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function wbRe(w){return new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');}
+
+function findW(text,words){var s=new Set();words.forEach(function(w){var re=wbRe(w),m;while((m=re.exec(text))!==null)s.add(m[0].toLowerCase());});return Array.from(s);}
+
+function findP(text,phrases){var s=new Set();phrases.forEach(function(p){var re=new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m;while((m=re.exec(text))!==null)s.add(m[0].toLowerCase());});return Array.from(s);}
+
+function isVD(text,idx,len){var cRe=new RegExp(CARGOS_STR,'i'),b=text.slice(Math.max(0,idx-120),idx),a=text.slice(idx+len,Math.min(text.length,idx+len+120)),ctx=b+a;return cRe.test(ctx)||/[""«»"]/.test(ctx)||(/[A-ZÁÉÍÓÚ][a-záéíóú]+ [A-ZÁÉÍÓÚ][a-záéíóú]+/.test(ctx)&&/\bque\b|:/.test(b));}
+
+function analyze(text){
+  var paras=text.split(/\n+/).filter(function(p){return p.trim().length>0;}),tit=paras[0]||'',lide=paras.slice(0,2).join(' '),items=[];
+
+  var tD=DADOS_RE.test(tit);
+  items.push({id:'tit-dado',level:'essential',tipo:tD?'ok':'err',cat:'Título',txt:tD?'Título contém dado mensurável.':'Título sem dado mensurável.',detail:tD?null:'O título deve trazer pelo menos um número, valor ou percentual. Modelo: "[Empresa] registra alta de 12% em geração renovável no trimestre."',sug:tD?null:'Inclua o dado mais relevante do release no título.',occs:[],occT:'err'});
+
+  var tw=tit.split(/\s+/).filter(Boolean).length;
+  items.push({id:'tit-ext',level:'essential',tipo:tw>18?'warn':'ok',cat:'Título · Extensão',txt:tw>18?'Título longo ('+tw+' palavras) — recomendado até 15.':'Extensão do título adequada ('+tw+' palavras).',detail:'Títulos curtos com dado-chave atendem melhor ao padrão jornalístico.',sug:tw>18?'Reduza o título mantendo o dado mensurável e o verbo de ação.':null,occs:[],occT:'warn'});
+
+  var qO=/\b(investiu|investirá|lança|lançou|anuncia|anunciou|conclui|concluiu|inicia|iniciou|amplia|ampliou|reduz|reduziu|registra|registrou|atinge|atingiu|alcança|alcançou|assina|assinou|implementa|implementou)\b/i.test(lide);
+  var qQ=/\b([A-ZÁÉÍÓÚ][a-záéíóú]+ (?:S\.A\.|S\/A|Ltda\.?|Group|Brasil|Energia|Capital|Holding|Participações))|(a empresa|a companhia|o grupo)\b/i.test(lide);
+  var qW=/\b(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}|\d{4}|trimestre|semestre)\b/i.test(lide);
+  var qWh=/\b(em [A-ZÁÉÍÓÚ]|no Brasil|unidade|sede|planta|parque|complexo)\b/i.test(lide);
+  var qWy=/\b(com objetivo|para (?:ampliar|reduzir|expandir|consolidar|melhorar|aumentar)|visando|a fim de)\b/i.test(lide);
+  var flt=[];if(!qO)flt.push('O quê');if(!qQ)flt.push('Quem');if(!qW)flt.push('Quando');if(!qWh)flt.push('Onde');if(!qWy)flt.push('Por quê/Para quê');
+  items.push({id:'lide-5q',level:'essential',tipo:flt.length===0?'ok':flt.length<=2?'warn':'err',cat:'Lide · 5Q',txt:flt.length===0?'Lide cobre os cinco elementos jornalísticos.':flt.length<=2?'Lide possivelmente incompleto — verifique os 5Q.':'Lide não responde os 5Q.',detail:'O primeiro parágrafo deve responder: O quê, Quem, Quando, Onde, Por quê/Para quê.'+(flt.length?' Não identificado(s): '+flt.join(', ')+'.':''),sug:flt.length?'Incorpore os elementos ausentes no lide.':null,occs:flt,occT:'err'});
+
+  var lD=DADOS_RE.test(paras[0]||'');
+  items.push({id:'lide-dado',level:'essential',tipo:lD?'ok':'err',cat:'Lide · Dado verificável',txt:lD?'Lide contém dado verificável.':'Lide sem dado verificável.',detail:'O primeiro parágrafo deve trazer pelo menos um número, valor financeiro ou percentual concreto.',sug:lD?null:'Inclua o dado mais forte do texto já no lide — não o enterre no corpo.',occs:[],occT:'err'});
+
+  var adjArr=findW(text,ADJ).concat(findP(text,FRASES));
+  items.push({id:'adjetivos',level:'essential',tipo:adjArr.length===0?'ok':'err',cat:'Adjetivos subjetivos',txt:adjArr.length===0?'Nenhum adjetivo subjetivo identificado.':adjArr.length+' adjetivo(s)/expressão(ões) subjetiva(s).',detail:'Adjetivos subjetivos não têm valor jornalístico. Substitua cada um por dado mensurável.',sug:'Ex: "resultado expressivo" → "resultado 8% superior ao período anterior".',occs:adjArr,occT:'err'});
+
+  var vSet=new Set();VPROIB.forEach(function(v){var re=wbRe(v),m;while((m=re.exec(text))!==null)if(isVD(text,m.index,m[0].length))vSet.add(m[0].toLowerCase());});var vArr=Array.from(vSet);
+  items.push({id:'verbos',level:'essential',tipo:vArr.length===0?'ok':'err',cat:'Verbos declarativos',txt:vArr.length===0?'Verbos declarativos adequados.':'Verbo(s) impróprio(s) em citação.',detail:'Use apenas: afirmou, declarou, informou, avaliou. Verbos como "destaca", "ressalta" e "reforça" carregam carga opinativa.',sug:'Substitua pelos verbos neutros do manual.',occs:vArr,occT:'err'});
+
+  var nP=paras.length;
+  items.push({id:'estrutura',level:'essential',tipo:nP>=4?'ok':'warn',cat:'Estrutura · Pirâmide invertida',txt:nP>=4?'Extensão adequada ('+nP+' parágrafos).':'Release curto ('+nP+' parágrafo(s)).',detail:'A pirâmide invertida requer: lide com fato principal → impacto → dados → contexto → declaração → próximos passos.',sug:nP<4?'Expanda o release cobrindo impacto, contexto, declaração e próximos passos.':null,occs:[],occT:'warn'});
+
+  var tVOk=VOK.some(function(v){return wbRe(v).test(text);});
+  var tAsp=(text.indexOf('"')!==-1&&text.split('"').length>2)||/[""«»]/.test(text);
+  items.push({id:'declaracao',level:'essential',tipo:(tVOk&&tAsp)?'ok':'warn',cat:'Declaração oficial',txt:(tVOk&&tAsp)?'Declaração com verbo neutro e aspas identificada.':!tAsp?'Nenhuma declaração de porta-voz identificada.':'Declaração sem verbo neutro.',detail:'O release deve ter ao menos uma citação com verbo neutro (afirmou, declarou, informou, avaliou) e aspas.',sug:!(tVOk&&tAsp)?'Inclua citação entre aspas com verbo neutro atribuída a nome e cargo do porta-voz.':null,occs:[],occT:'warn'});
+
+  var nSet=new Set();NUMS_RE.forEach(function(re){var r=new RegExp(re.source,'gi'),m;while((m=r.exec(text))!==null)nSet.add(m[0].toLowerCase());});var nArr=Array.from(nSet);
+  items.push({id:'numerais',level:'advanced',tipo:nArr.length===0?'ok':'warn',cat:'Numerais',txt:nArr.length===0?'Numerais em algarismos (padrão correto).':'Número(s) por extenso a verificar.',detail:'Regra: algarismos para valores financeiros, percentuais, datas e estatísticas. Por extenso apenas zero a dez, cem e mil.',sug:'Substitua os números por extenso por algarismos onde aplicável.',occs:nArr,occT:'warn'});
+
+  var vgArr=findP(text,EVAGAS);
+  items.push({id:'temporal',level:'advanced',tipo:vgArr.length===0?'ok':'err',cat:'Precisão temporal',txt:vgArr.length===0?'Sem expressões temporais vagas.':'Expressão(ões) temporal(is) vaga(s).',detail:'Expressões como "em breve" e "nos próximos meses" não têm valor jornalístico. Use data concreta.',sug:'Substitua por data específica. Ex: "até 31 de dezembro de 2026".',occs:vgArr,occT:'err'});
+
+  var eArr=findW(text,PEMOC);
+  items.push({id:'emocional',level:'advanced',tipo:eArr.length===0?'ok':'err',cat:'Predicados emocionais',txt:eArr.length===0?'Nenhum predicado emocional identificado.':'Predicado(s) emocional(is) atribuído(s) a fonte.',detail:'Releases não devem atribuir estado emocional a porta-vozes. "Fulano, emocionado, afirmou..." é inadequado para o gênero.',sug:'Remova o predicado emocional. A frase funciona sem ele.',occs:eArr,occT:'err'});
+
+  var aiFound=[];AIP_RE.forEach(function(re){var r=new RegExp(re.source,'gi'),m;while((m=r.exec(text))!==null){var t=m[0].trim();if(t.length>55)t=t.slice(0,55)+'…';aiFound.push(t);}});
+  items.push({id:'ai-patterns',level:'advanced',tipo:aiFound.length===0?'ok':'warn',cat:'Linguagem retórica / padrão IA',txt:aiFound.length===0?'Nenhum padrão retórico ou de IA identificado.':aiFound.length+' trecho(s) com padrão retórico ou de IA.',detail:'Construções como "não apenas X mas Y", "mais do que gerar energia gera oportunidades" e verbos de impulso abstratos são marcas de texto corporativo inflado ou gerado por IA.',sug:'Substitua pela afirmação direta com dado concreto.',occs:aiFound,occT:'warn'});
+
+  if(paras.length>1){var cD=paras.slice(1).some(function(p){return DADOS_RE.test(p);});items.push({id:'corpo-dados',level:'advanced',tipo:cD?'ok':'warn',cat:'Dados no corpo',txt:cD?'Corpo contém dados mensuráveis.':'Corpo sem dados mensuráveis.',detail:'O desenvolvimento deve trazer dados comparativos, financeiros ou operacionais para sustentar as afirmações do lide.',sug:'Inclua valores, percentuais ou indicadores operacionais no desenvolvimento.',occs:[],occT:'warn'});}
+
+  return items;
+}
+
+var currentItems=[],resolved={},expanded={},showAdv=false,reportData='';
+
+function runReview(){
+  var text=document.getElementById('inputText').value.trim();
+  if(!text){showToast('Cole um texto antes de verificar.');return;}
+  resolved={};expanded={};showAdv=false;
+  currentItems=analyze(text);
+  renderChecklist();
+}
+
+function renderChecklist(){
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('scoreStrip').style.display='flex';
+  document.getElementById('clFooter').style.display='flex';
+  var el=document.getElementById('clItems');el.style.display='block';
+  var total=currentItems.length;
+  var oks=currentItems.filter(function(i){return i.tipo==='ok';}).length;
+  var warns=currentItems.filter(function(i){return i.tipo==='warn';}).length;
+  var errs=currentItems.filter(function(i){return i.tipo==='err';}).length;
+  var score=Math.round(((oks+warns*0.5)/total)*100);
+  var sc=score>=75?'s-high':score>=50?'s-mid':'s-low';
+  var sf=score>=75?'sf-high':score>=50?'sf-mid':'sf-low';
+  document.getElementById('scoreNum').textContent=score+'%';
+  document.getElementById('scoreNum').className='score-num '+sc;
+  var fill=document.getElementById('scoreFill');
+  fill.style.width='0%';fill.className='score-fill';
+  setTimeout(function(){fill.style.width=score+'%';fill.className='score-fill '+sf;},50);
+  document.getElementById('scoreCounts').innerHTML='<div class="sc-pill pill-err"><div class="sc-dot dot-err"></div>'+errs+' correç.</div><div class="sc-pill pill-warn"><div class="sc-dot dot-warn"></div>'+warns+' avis.</div><div class="sc-pill pill-ok"><div class="sc-dot dot-ok"></div>'+oks+' ok</div>';
+  document.getElementById('clStatus').textContent=total+' itens verificados';
+  updateFR();
+  var ess=currentItems.filter(function(i){return i.level==='essential';});
+  var adv=currentItems.filter(function(i){return i.level==='advanced';});
+  var html='<div class="cl-section">Itens essenciais</div>';
+  ess.forEach(function(item,i){html+=buildI(item,i);});
+  html+='<button class="toggle-adv'+(showAdv?' open':'')+'" onclick="toggleAdv()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>'+(showAdv?'Ocultar avançados':'Ver itens avançados ('+adv.length+')')+'</button>';
+  if(showAdv){html+='<div class="cl-section">Itens avançados</div>';adv.forEach(function(item,i){html+=buildI(item,ess.length+i);});}
+  el.innerHTML=html;
+  buildRpt();
+}
+
+function buildI(item,delay){
+  var isR=!!resolved[item.id],isE=!!expanded[item.id];
+  var tC='type-'+item.tipo,iL=item.tipo==='err'?'&#10005;':item.tipo==='warn'?'!':'&#10003;',iC='icon-'+item.tipo;
+  var hD=!!(item.detail||(item.occs&&item.occs.length>0)),oC=item.occT==='warn'?'occ-warn':'occ-err';
+  var h='<div class="cl-item '+tC+(isR?' resolved':'')+'" id="item-'+item.id+'" style="animation-delay:'+(delay*40)+'ms">';
+  h+='<div class="cl-main"><div class="cl-check'+(isR?' checked':'')+'" onclick="toggleR(\''+item.id+'\')" title="Marcar como resolvido"></div>';
+  h+='<div class="cl-body"><div class="cl-cat">'+esc(item.cat)+'</div><div class="cl-main-text">'+esc(item.txt)+'</div></div>';
+  h+='<div class="cl-type-icon '+iC+'">'+iL+'</div>';
+  if(hD)h+='<button class="cl-expand-btn'+(isE?' open':'')+'" onclick="toggleE(\''+item.id+'\')" title="Ver detalhes"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>';
+  h+='</div>';
+  if(hD&&isE){h+='<div class="cl-detail open">';if(item.detail)h+=esc(item.detail);if(item.occs&&item.occs.length)h+='<div class="cl-occs">'+item.occs.map(function(o){return'<span class="'+oC+'">'+esc(o)+'</span>';}).join('')+'</div>';if(item.sug)h+='<div class="cl-detail-sug"><span class="cl-detail-sug-icon">&#8594;</span><span>'+esc(item.sug)+'</span></div>';h+='</div>';}
+  h+='</div>';return h;
+}
+
+function toggleR(id){resolved[id]=!resolved[id];var el=document.getElementById('item-'+id);if(!el)return;el.classList.toggle('resolved',!!resolved[id]);var c=el.querySelector('.cl-check');if(c)c.classList.toggle('checked',!!resolved[id]);updateFR();buildRpt();}
+function toggleE(id){expanded[id]=!expanded[id];renderChecklist();}
+function toggleAdv(){showAdv=!showAdv;renderChecklist();}
+function updateFR(){var r=Object.values(resolved).filter(Boolean).length,t=currentItems.length;document.getElementById('footerResolved').textContent=r>0?r+' de '+t+' resolvidos':'';}
+
+function buildRpt(){
+  var lines=['CHECKLIST DE REVISÃO EDITORIAL','='.repeat(40)];
+  var grps={err:'CORREÇÕES NECESSÁRIAS',warn:'AVISOS',ok:'PONTOS OK'};
+  ['err','warn','ok'].forEach(function(tipo){
+    var g=currentItems.filter(function(i){return i.tipo===tipo;});
+    if(!g.length)return;
+    lines.push('',grps[tipo]);
+    g.forEach(function(i){
+      lines.push('- ['+i.cat+'] '+i.txt+(resolved[i.id]?' [RESOLVIDO]':''));
+      if(i.occs&&i.occs.length)lines.push('  Ocorrências: '+i.occs.join(', '));
+      if(i.sug&&!resolved[i.id])lines.push('  Sugestão: '+i.sug);
+    });
+  });
+  reportData=lines.join('\n');
+}
+
+function copyReport(){buildRpt();if(!reportData)return;navigator.clipboard.writeText(reportData).then(function(){showToast('Relatório copiado!');});}
+function clearAll(){document.getElementById('inputText').value='';document.getElementById('charCt').textContent='0 caracteres';document.getElementById('clStatus').textContent='Aguardando texto';document.getElementById('emptyState').style.display='flex';document.getElementById('clItems').style.display='none';document.getElementById('scoreStrip').style.display='none';document.getElementById('clFooter').style.display='none';currentItems=[];resolved={};expanded={};showAdv=false;reportData='';}
+function updateCt(){var v=document.getElementById('inputText').value;document.getElementById('charCt').textContent=v.length.toLocaleString('pt-BR')+' caracteres';}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+</script>
+</body>
+</html>
